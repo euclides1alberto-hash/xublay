@@ -1,92 +1,78 @@
 #include <Arduino.h>
-// set pin numbers
-const int buttonPin = 4;  // the number of the pushbutton pin
-const int ledPin =  5;    // the number of the LED pin
+/*
+ * Controle de 4 LEDs com 4 Botões - Arduino Uno
+ * Cada botão alterna (toggle) o estado do seu LED correspondente
+ *
+ * Conexões:
+ *   Botão 1 → Pino 2    LED 1 → Pino 8
+ *   Botão 2 → Pino 3    LED 2 → Pino 9
+ *   Botão 3 → Pino 4    LED 3 → Pino 10
+ *   Botão 4 → Pino 5    LED 4 → Pino 11
+ *
+ * Observações:
+ * - Botões ligados entre pino e GND (usando pull-up interno)
+ * - LEDs com resistor de 220–330 Ω em série com o catodo → GND
+ * - Detecta apenas o momento em que o botão é pressionado (flanco de descida)
+ */
 
-const int buttunPin = 12;
-const int LedPin2 = 11;
+#define NUM_LEDS 4
 
-const int buttunpin3 = 1;
-const int ledpin3 = 10;
+// Pinos dos botões (conectados a GND quando pressionados)
+const uint8_t pinBotao[NUM_LEDS] = {2, 3, 4, 5};
 
-const int buttunpin4 = 6;
-const int ledpin4 = 7;
+// Pinos dos LEDs
+const uint8_t pinLed[NUM_LEDS]   = {8, 9, 10, 11};
 
-// variable for storing the pushbutton status
-int buttonState = 0;
-bool botao4 = 0;
-bool botao12 = 0;
-bool botao13 = 0;
-bool botao14 = 0;
+// Estados anteriores dos botões (para detectar borda de descida)
+uint8_t ultimoEstadoBotao[NUM_LEDS] = {HIGH, HIGH, HIGH, HIGH};
+
+// Estado atual dos LEDs (true = ligado)
+bool estadoLed[NUM_LEDS] = {false, false, false, false};
 
 void setup() {
-  Serial.begin(115200);  
-  // initialize the pushbutton pin as an input
-  pinMode(buttonPin, INPUT);
-  // initialize the LED pin as an output
-  pinMode(ledPin, OUTPUT);
+  Serial.begin(9600);
+  delay(300);               // pequeno delay para estabilizar o Serial
+  Serial.println("\n=== Controle 4 Botões + 4 LEDs - Iniciado ===\n");
 
-  pinMode(4, INPUT);
-
-    pinMode(12, INPUT);
-    pinMode(8, OUTPUT);
-
-   pinMode(3, INPUT);
-   pinMode(2, OUTPUT);
-
-  pinMode(6, INPUT);
-  pinMode(7, OUTPUT);
+  for (uint8_t i = 0; i < NUM_LEDS; i++) {
+    pinMode(pinBotao[i], INPUT_PULLUP);
+    pinMode(pinLed[i],   OUTPUT);
+    digitalWrite(pinLed[i], LOW);     // garante LEDs desligados no início
+  }
+  
+  Serial.println("Pressione qualquer botão para alternar o LED correspondente.");
+  Serial.println("--------------------------------------------");
 }
 
 void loop() {
- //   // read the state of the pushbutton value
-  // buttonState = digitalRead(buttonPin);
-  // Serial.println(buttonState);
-  // check if the pushbutton is pressed.
-  // if it is, the buttonState is HIGH
-  // if (buttonState == HIGH) {
-    // turn LED on
-    // digitalWrite(ledPin, HIGH);
-  // } else {
-    // turn LED off
-    // digitalWrite(ledPin, LOW);
-  // }
-  botao4 =digitalRead(4);
-  Serial.println(botao4);
+  for (uint8_t i = 0; i < NUM_LEDS; i++) {
+    uint8_t leituraAtual = digitalRead(pinBotao[i]);
 
-  if (botao4 == HIGH)  {
-    digitalWrite(ledPin, HIGH);
-  } else {
-     digitalWrite(ledPin, LOW);
+    // Detecta quando o botão foi pressionado (HIGH → LOW)
+    if (leituraAtual == LOW && ultimoEstadoBotao[i] == HIGH) {
+      
+      // Debounce simples
+      delay(20);
+      if (digitalRead(pinBotao[i]) == LOW) {   // ainda pressionado?
+        
+        // Alterna o estado do LED
+        estadoLed[i] = !estadoLed[i];
+        digitalWrite(pinLed[i], estadoLed[i] ? HIGH : LOW);
+
+        // Mensagem no monitor serial
+        Serial.print("Botão ");
+        Serial.print(i + 1);
+        Serial.print(" → LED ");
+        Serial.print(i + 1);
+        Serial.print(" ");
+        Serial.println(estadoLed[i] ? "LIGADO" : "desligado");
+      }
+    }
+
+    // Atualiza o estado anterior para a próxima leitura
+    ultimoEstadoBotao[i] = leituraAtual;
   }
- 
-
-  botao12= digitalRead(12);
-  Serial.println(botao12);
-  if (botao12 == HIGH) {
-    digitalWrite(8, HIGH);
- 
-  } else {
-    digitalWrite(8, LOW);
-  }
- 
-
-  botao13= digitalRead(3);
- Serial.println(botao13);
-  if (botao13 == HIGH) {
-    digitalWrite(2, HIGH);
- 
-  } else {
-    digitalWrite(2, LOW);
-  }
-
-
-   botao14= digitalRead(6);
- Serial.println(botao14);
-  if (botao14 == HIGH) {
-    digitalWrite(7, HIGH);
- 
-  } else {
-    digitalWrite(7, LOW);
-  }
+  
+  // Aqui você pode adicionar outras tarefas não-bloqueantes se quiser
+  // (ex: ler sensores, atualizar display, etc)
 }
